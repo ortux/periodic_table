@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Periodic Table Quiz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --border-dark: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --glow-correct: #4dff8a;
+            --glow-incorrect: #ff4848;
+            --glow-accent: #3d9dff;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .quiz-container {
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-dark);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 0 40px rgba(61, 157, 255, 0.2);
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: white;
+            text-shadow: 0 0 10px var(--glow-accent);
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--glow-accent), #8b62ff);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(61, 157, 255, 0.4);
+            display: inline-block;
+        }
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 25px rgba(61, 157, 255, 0.6);
+        }
+        .btn-small { padding: 12px 24px; font-size: 1rem; }
+
+        .name-input {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 10px;
+            color: var(--text-primary);
+            padding: 15px;
+            font-size: 1rem;
+            width: 80%;
+            max-width: 300px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .question-area h2 {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: white;
+            min-height: 70px; /* Reserve space */
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .option-btn {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-dark);
+            color: var(--text-primary);
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--glow-accent);
+            color: white;
+        }
+        
+        .option-btn.correct { background-color: rgba(77, 255, 138, 0.2); border-color: var(--glow-correct); }
+        .option-btn.incorrect { background-color: rgba(255, 72, 72, 0.2); border-color: var(--glow-incorrect); }
+        .option-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-secondary);
+        }
+
+        #feedback { font-weight: 700; min-height: 24px; }
+        #feedback.correct { color: var(--glow-correct); }
+        #feedback.incorrect { color: var(--glow-incorrect); }
+
+        /* Loader */
+        .loader { width: 50px; height: 50px; border: 5px solid var(--border-dark); border-top-color: var(--glow-accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Hide elements by default */
+        #quizScreen, #resultScreen { display: none; }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <!-- Start Screen -->
+        <div id="startScreen">
+            <h1>Chemistry Quiz Challenge</h1>
+            <p>Test your knowledge of the periodic table. Enter your name to begin and claim your certificate upon completion!</p>
+            <input type="text" id="nameInput" class="name-input" placeholder="Enter Your Name" required>
+            <br>
+            <button class="btn" onclick="startQuiz()">Start Quiz</button>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen">
+            <div id="questionArea" class="question-area">
+                <h2>Loading Question...</h2>
+                <div class="loader" id="loader"></div>
+                <div class="options-grid" id="optionsGrid"></div>
+            </div>
+            <div class="quiz-footer">
+                <div id="feedback"></div>
+                <div id="progress">Question 1 / 10</div>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="resultScreen">
+            <h1>Quiz Complete!</h1>
+            <p id="resultText"></p>
+            <button id="certificateBtn" class="btn">Claim Your Certificate</button>
+            <button onclick="window.location.reload()" class="btn btn-small" style="background: var(--border-dark); margin-top: 15px;">Try Again</button>
+        </div>
+    </div>
+
+<script>
+    // 🛑 WARNING: THIS IS FOR DEMONSTRATION ONLY
+    // DO NOT expose your API key in a client-side code in a real application.
+    // Use a backend proxy to secure your key.
+    const API_KEY = 'AIzaSyAVcE7m7XgARmaxFdP02cW-P30PO2b4_fc';
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+    
+    const startScreen = document.getElementById('startScreen');
+    const quizScreen = document.getElementById('quizScreen');
+    const resultScreen = document.getElementById('resultScreen');
+    const nameInput = document.getElementById('nameInput');
+    
+    const questionEl = document.querySelector('#questionArea h2');
+    const optionsGrid = document.getElementById('optionsGrid');
+    const loader = document.getElementById('loader');
+    
+    const feedbackEl = document.getElementById('feedback');
+    const progressEl = document.getElementById('progress');
+    const resultText = document.getElementById('resultText');
+    const certificateBtn = document.getElementById('certificateBtn');
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+    const TOTAL_QUESTIONS = 10;
+    let currentCorrectAnswer = '';
+    let playerName = '';
+
+    function startQuiz() {
+        playerName = nameInput.value.trim();
+        if (playerName === '') {
+            alert('Please enter your name to start the quiz.');
+            return;
+        }
+        startScreen.style.display = 'none';
+        quizScreen.style.display = 'block';
+        loadQuestion();
+    }
+    
+    async function fetchQuestionFromAPI() {
+        const prompt = `Generate a unique, medium-difficulty multiple-choice quiz question about the periodic table of elements. The question should be engaging and test specific knowledge (e.g., about element properties, groups, periods, or history). Ensure the incorrect options are plausible but clearly wrong. Provide the response in a valid JSON object format only, with no other text before or after the JSON.
+        
+        The JSON object must have these exact keys:
+        - "question": A string for the question text.
+        - "options": An array of 4 unique strings, where one is the correct answer.
+        - "answer": The string of the correct answer, which must exactly match one of the strings in the 'options' array.
+        
+        Example:
+        {
+          "question": "Which element is a liquid at standard room temperature, other than Mercury?",
+          "options": ["Bromine", "Gallium", "Cesium", "Francium"],
+          "answer": "Bromine"
+        }`;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            
+            const data = await response.json();
+            // The actual content is nested, we need to extract and parse it
+            const jsonString = data.candidates[0].content.parts[0].text;
+            return JSON.parse(jsonString);
+
+        } catch (error) {
+            console.error('Error fetching question:', error);
+            // Fallback question in case of API failure
+            return {
+                question: "Which element has the symbol 'Fe'?",
+                options: ["Gold", "Silver", "Iron", "Lead"],
+                answer: "Iron"
+            };
+        }
+    }
+    
+    async function loadQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex > TOTAL_QUESTIONS) {
+            showResults();
+            return;
+        }
+
+        questionEl.textContent = 'Generating Question...';
+        optionsGrid.innerHTML = '';
+        loader.style.display = 'block';
+        feedbackEl.textContent = '';
+        feedbackEl.className = '';
+        progressEl.textContent = `Question ${currentQuestionIndex} / ${TOTAL_QUESTIONS}`;
+
+        const questionData = await fetchQuestionFromAPI();
+
+        loader.style.display = 'none';
+        questionEl.textContent = questionData.question;
+        currentCorrectAnswer = questionData.answer;
+
+        // Shuffle options to make it less predictable
+        const shuffledOptions = questionData.options.sort(() => Math.random() - 0.5);
+
+        shuffledOptions.forEach(option => {
+            const button = document.createElement('button');
+            button.className = 'option-btn';
+            button.textContent = option;
+            button.onclick = () => selectOption(button, option);
+            optionsGrid.appendChild(button);
+        });
+    }
+    
+    function selectOption(button, selectedAnswer) {
+        const allOptions = optionsGrid.querySelectorAll('.option-btn');
+        allOptions.forEach(btn => btn.disabled = true); // Disable all buttons after one is clicked
+
+        if (selectedAnswer === currentCorrectAnswer) {
+            score++;
+            button.classList.add('correct');
+            feedbackEl.textContent = "Correct!";
+            feedbackEl.classList.add('correct');
+        } else {
+            button.classList.add('incorrect');
+            feedbackEl.textContent = `Incorrect! The answer was ${currentCorrectAnswer}`;
+            feedbackEl.classList.add('incorrect');
+            // Highlight the correct answer
+            allOptions.forEach(btn => {
+                if (btn.textContent === currentCorrectAnswer) {
+                    btn.classList.add('correct');
+                }
+            });
+        }
+        
+        setTimeout(loadQuestion, 2500); // Wait 2.5 seconds before loading next question
+    }
+
+    function showResults() {
+        quizScreen.style.display = 'none';
+        resultScreen.style.display = 'block';
+        const percentage = Math.round((score / TOTAL_QUESTIONS) * 100);
+        
+        let message;
+        if (percentage >= 80) {
+            message = `Outstanding, ${playerName}! You are a true chemist!`;
+        } else if (percentage >= 50) {
+            message = `Good job, ${playerName}! A solid effort.`;
+        } else {
+            message = `Keep studying, ${playerName}! Practice makes perfect.`;
+        }
+        
+        resultText.innerHTML = `${message}<br>Your final score is <strong>${score} out of ${TOTAL_QUESTIONS}</strong> (${percentage}%).`;
+        
+        certificateBtn.onclick = () => {
+            window.location.href = `certificate.html?name=${encodeURIComponent(playerName)}&score=${score}`;
+        };
+    }
+
+</script>
+</body>
+</html>
